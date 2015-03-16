@@ -43,6 +43,37 @@ var MicrophoneAudioSource = function() {
     }, function(){ alert("error getting microphone input."); });
 };
 
+/*
+* FileAudioSource plays the provided music file and provides the data
+* required for the visualizer to function.
+*/
+var FileAudioSource = function(player) {
+	var self = this;
+	this.volume = 0;
+	this.streamData = new Uint8Array(128);
+	
+	var context = new AudioContext();
+	var source = context.createMediaElementSource(player);
+	var analyser = context.createAnalyser();
+	
+	source.connect(analyser);
+	analyser.connect(context.destination);
+	
+	//Same sampleAudioStream() as SoundCloudAudioSource
+	var sampleAudioStream = function() {
+        analyser.getByteFrequencyData(self.streamData);
+        // calculate an overall volume value
+        var total = 0;
+        for (var i = 0; i < 80; i++) { // get the volume from the first 80 bins, else it gets too loud with treble
+            total += self.streamData[i];
+        }
+        self.volume = total;
+    };
+	
+	player.play();
+	setInterval(sampleAudioStream, 20);
+};
+
 var SoundCloudAudioSource = function(player) {
     var self = this;
     var analyser;
@@ -597,7 +628,7 @@ window.onload = function init() {
     var uiUpdater = new UiUpdater();
     var loader = new SoundcloudLoader(player,uiUpdater);
 
-    var audioSource = new SoundCloudAudioSource(player);
+    var audioSource = new FileAudioSource(player);
     var form = document.getElementById('form');
     var loadAndUpdate = function(trackUrl) {
         loader.loadStream(trackUrl,
